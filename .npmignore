@@ -1,3 +1,11 @@
 .env
 test
 .github
+docs
+test
+.git
+scripts
+.gitignore
+.prettierignore
+package-lock.json
+yarn.lock
