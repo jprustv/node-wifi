@@ -29,16 +29,36 @@ function connectToWifi(config, ap, callback) {
               err = new Error(resp.replace('Error: ', ''));
               callback && callback(err);
             } else {
-              // nmcli con up SSID
-              args = ['con', 'up', ap.ssid]
 
-              execFile('nmcli', args, { env: env }, function(err, resp) {
+              if (ap.static_ip) {
+                // nmcli connection modify SSID ipv4.address "STATIC IP ADDRESS"
+                args = ['con', 'modify', ap.ssid, 'ipv4.address', ap.static_ip]
+                execFile('nmcli', args, { env: env }, function(err, resp) {
+                  if (resp.includes('Error: ')) {
+                    err = new Error(resp.replace('Error: ', ''));
+                    callback && callback(err);
+                  } else {
+                    // nmcli con up SSID
+                    args = ['con', 'up', ap.ssid]
+                    execFile('nmcli', args, { env: env }, function(err, resp) {
+                      if (resp.includes('Error: ')) {
+                        err = new Error(resp.replace('Error: ', ''));
+                      }
+                      callback && callback(err);
+                    });
+                  }
+                })
+              } else {
+                // nmcli con up SSID
+                args = ['con', 'up', ap.ssid]
+                execFile('nmcli', args, { env: env }, function(err, resp) {
+                  if (resp.includes('Error: ')) {
+                    err = new Error(resp.replace('Error: ', ''));
+                  }
+                  callback && callback(err);
+                });
+              }
 
-                if (resp.includes('Error: ')) {
-                  err = new Error(resp.replace('Error: ', ''));
-                }
-                callback && callback(err);
-              });
             }
           });
         }
