@@ -1,72 +1,114 @@
 var execFile = require('child_process').execFile;
 var env = require('./env');
 
-function connectToWifi(config, ap, callback) {
-
+function _addConnection(ap, callback) {
   // nmcli con add type wifi ifname wlan0 con-name SSID autoconnect yes ssid SSID
-  var args = ['con', 'add', 'type', 'wifi', 'ifname', 'wlan0', 'con-name', ap.ssid, 'autoconnect', 'yes', 'ssid', ap.ssid];
+  return new Promise((resolve, reject) => {
+    var args = ['con', 'add', 'type', 'wifi', 'ifname', 'wlan0', 'con-name', ap.ssid, 'autoconnect', 'yes', 'ssid', ap.ssid];
+    execFile('nmcli', args, { env: env }, function(err, resp) {
+      // Errors from nmcli came from stdout, we test presence of 'Error: ' string
+      if (resp.includes('Error: ')) {
+        err = new Error(resp.replace('Error: ', ''));
+        callback && callback(err);
+        reject(err)
+      } else resolve()
+    });
+  })
+}
 
-  execFile('nmcli', args, { env: env }, function(err, resp) {
-    // Errors from nmcli came from stdout, we test presence of 'Error: ' string
-    if (resp.includes('Error: ')) {
-      err = new Error(resp.replace('Error: ', ''));
+function _modifyKeyMgmt(ap, callback) {
+  // nmcli con modify SSID wifi-sec.key-mgmt wpa-psk
+  return new Promise((resolve, reject) => {
+    args = ['con', 'modify', ap.ssid, 'wifi-sec.key-mgmt', 'wpa-psk'];
+    execFile('nmcli', args, { env: env }, function(err, resp) {
+      // Errors from nmcli came from stdout, we test presence of 'Error: ' string
+      if (resp.includes('Error: ')) {
+        err = new Error(resp.replace('Error: ', ''));
+        callback && callback(err);
+        reject(err)
+      } else resolve()
+    });
+  })
+}
+
+function _modifyPassword(ap, callback) {
+  // nmcli con modify SSID wifi-sec.psk "PASSWORD"
+  return new Promise((resolve, reject) => {
+    args = ['con', 'modify', ap.ssid, 'wifi-sec.psk', ap.password]
+    execFile('nmcli', args, { env: env }, function(err, resp) {
+      // Errors from nmcli came from stdout, we test presence of 'Error: ' string
+      if (resp.includes('Error: ')) {
+        err = new Error(resp.replace('Error: ', ''));
+        callback && callback(err);
+        reject(err)
+      } else resolve()
+    });
+  })
+}
+
+function _modifyIpAddress(ap, callback) {
+  // nmcli connection modify SSID ipv4.address "STATIC IP ADDRESS"
+  return new Promise((resolve, reject) => {
+    args = ['con', 'modify', ap.ssid, 'ipv4.address', ap.static_ip]
+    execFile('nmcli', args, { env: env }, function(err, resp) {
+      // Errors from nmcli came from stdout, we test presence of 'Error: ' string
+      if (resp.includes('Error: ')) {
+        err = new Error(resp.replace('Error: ', ''));
+        callback && callback(err);
+        reject(err)
+      } else resolve()
+    });
+  })
+}
+
+function _modifyAutoconnectPriority(ap, callback) {
+  // nmcli c mod con1 connection.autoconnect-priority 1
+  return new Promise((resolve, reject) => {
+    args = ['con', 'modify', ap.ssid, 'connection.autoconnect-priority', '1'];
+    execFile('nmcli', args, { env: env }, function(err, resp) {
+      // Errors from nmcli came from stdout, we test presence of 'Error: ' string
+      if (resp.includes('Error: ')) {
+        err = new Error(resp.replace('Error: ', ''));
+        callback && callback(err);
+        reject(err)
+      } else resolve()
+    });
+  })
+}
+
+function _startConnection(ap, callback) {
+  // nmcli con up SSID
+  return new Promise((resolve, reject) => {
+    args = ['con', 'up', ap.ssid]
+    execFile('nmcli', args, { env: env }, function(err, resp) {
+      // Errors from nmcli came from stdout, we test presence of 'Error: ' string
+      if (resp.includes('Error: ')) {
+        err = new Error(resp.replace('Error: ', ''));
+      }
       callback && callback(err);
-    } else {
-      // nmcli con modify SSID wifi-sec.key-mgmt wpa-psk
-      args = ['con', 'modify', ap.ssid, 'wifi-sec.key-mgmt', 'wpa-psk']
-      execFile('nmcli', args, { env: env }, function(err, resp) {
+      resolve()
+    });
+  })
+}
 
-        if (resp.includes('Error: ')) {
-          err = new Error(resp.replace('Error: ', ''));
-          callback && callback(err);
+function connectToWifi(config, ap, callback) {
+  _addConnection(ap, callback).then(() => {
+    _modifyKeyMgmt(ap, callback).then(() => {
+      _modifyPassword(ap, callback).then(() => {
+        if (ap.static_ip) {
+          _modifyIpAddress(ap, callback).then(() => {
+            _modifyAutoconnectPriority(ap, callback).then(() => {
+              _startConnection(ap, callback)
+            })
+          })
         } else {
-          // nmcli con modify SSID wifi-sec.psk "PASSWORD"
-          args = ['con', 'modify', ap.ssid, 'wifi-sec.psk', ap.password]
-
-          execFile('nmcli', args, { env: env }, function(err, resp) {
-
-            if (resp.includes('Error: ')) {
-              err = new Error(resp.replace('Error: ', ''));
-              callback && callback(err);
-            } else {
-
-              if (ap.static_ip) {
-                // nmcli connection modify SSID ipv4.address "STATIC IP ADDRESS"
-                args = ['con', 'modify', ap.ssid, 'ipv4.address', ap.static_ip]
-                execFile('nmcli', args, { env: env }, function(err, resp) {
-                  if (resp.includes('Error: ')) {
-                    err = new Error(resp.replace('Error: ', ''));
-                    callback && callback(err);
-                  } else {
-                    // nmcli con up SSID
-                    args = ['con', 'up', ap.ssid]
-                    execFile('nmcli', args, { env: env }, function(err, resp) {
-                      if (resp.includes('Error: ')) {
-                        err = new Error(resp.replace('Error: ', ''));
-                      }
-                      callback && callback(err);
-                    });
-                  }
-                })
-              } else {
-                // nmcli con up SSID
-                args = ['con', 'up', ap.ssid]
-                execFile('nmcli', args, { env: env }, function(err, resp) {
-                  if (resp.includes('Error: ')) {
-                    err = new Error(resp.replace('Error: ', ''));
-                  }
-                  callback && callback(err);
-                });
-              }
-
-            }
-          });
+          _modifyAutoconnectPriority(ap, callback).then(() => {
+            _startConnection(ap, callback)
+          })
         }
-      });
-    }
-
-  });
-
+      })
+    })
+  })
 }
 
 module.exports = function(config) {
