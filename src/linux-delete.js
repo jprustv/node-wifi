@@ -12,6 +12,16 @@ function deleteConnection(config, ap, callback) {
   execFile('nmcli', args, env, function(err) {
     callback && callback(err);
   });
+
+  if (ap.fallbackConnection) {
+    args = []
+    args.push('connection');
+    args.push('up');
+    args.push(ap.fallbackConnection);
+    execFile('nmcli', args, env, function(err) {
+      callback && callback(err);
+    });
+  }
 }
 
 module.exports = function(config) {
