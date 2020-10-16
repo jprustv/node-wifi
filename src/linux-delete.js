@@ -15,12 +15,22 @@ function deleteConnection(config, ap, callback) {
 
   if (ap.fallbackConnection) {
     args = []
-    args.push('connection');
-    args.push('up');
+    args.push('con');
+    args.push('modify');
     args.push(ap.fallbackConnection);
+    args.push('connection.autoconnect');
+    args.push('true');
     execFile('nmcli', args, env, function(err) {
-      callback && callback(err);
+      args = []
+      args.push('con');
+      args.push('up');
+      args.push(ap.fallbackConnection);
+      execFile('nmcli', args, env, function(err) {
+        // ERROR
+      });
     });
+
+
   }
 }
 

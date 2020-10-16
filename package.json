@@ -1,6 +1,6 @@
 {
   "name": "@jprustv/node-wifi",
-  "version": "2.0.16",
+  "version": "2.0.17",
   "description": "NodeJS tool to manage wifi",
   "keywords": [
     "wifi",

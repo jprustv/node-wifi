@@ -76,7 +76,21 @@ function _modifyAutoconnectPriority(ap, callback) {
   })
 }
 
-function _startConnection(ap, callback) {
+function _postNmcliCommand(ap) {
+  // nmcli c mod con1 connection.autoconnect-priority 1
+  return new Promise((resolve, reject) => {
+    if (ap.postCommand) {
+      args = ap.postCommand
+      execFile('nmcli', args, { env: env }, function(err, resp) {
+        resolve()
+      });
+    } else {
+      resolve()
+    }
+  })
+}
+
+function _startConnection(ap) {
   // nmcli con up SSID
   return new Promise((resolve, reject) => {
     args = ['con', 'up', ap.ssid]
@@ -99,11 +113,13 @@ function connectToWifi(config, ap, callback) {
           _modifyIpAddress(ap, callback).then(() => {
             _modifyAutoconnectPriority(ap, callback).then(() => {
               _startConnection(ap, callback)
+              _postNmcliCommand(ap)
             })
           })
         } else {
           _modifyAutoconnectPriority(ap, callback).then(() => {
             _startConnection(ap, callback)
+            _postNmcliCommand(ap)
           })
         }
       })
